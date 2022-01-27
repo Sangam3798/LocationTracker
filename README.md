@@ -1,1 +1,2 @@
 # LocationTracker
+#Clone this repo
