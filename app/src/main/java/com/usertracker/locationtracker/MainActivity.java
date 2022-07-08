@@ -8,22 +8,37 @@ import android.Manifest;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
+import android.widget.ProgressBar;
+
+import com.androidnetworking.AndroidNetworking;
+import com.androidnetworking.common.Priority;
+import com.androidnetworking.error.ANError;
+import com.androidnetworking.interfaces.JSONObjectRequestListener;
 
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class MainActivity extends AppCompatActivity {
     private static  final int REQUEST_CODE_LOCATION_PERMISSION = 1;
     private String[] permission  = {""};
     private static  boolean runningQOrLater =
             android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q;
+    Constant constant  = Constant.getInstance();
+    private SharedPreferences sharedPreferences  = constant.sharedPreferences ;
+    ProgressBar logoutProgress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        logoutProgress =  findViewById(R.id.progressBar);
+        logoutProgress.setVisibility(View.GONE);
         findViewById(R.id.startButton).setOnClickListener(
                 new View.OnClickListener() {
                     @Override
@@ -120,5 +135,33 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(getApplicationContext(),LocationService.class);
         intent.setAction(Constant.ACTION_STOP_LOCATION_SERVICE);
         startService(intent);
+    }
+
+    void onClickOfLogOut() {
+        logoutProgress.setVisibility(View.VISIBLE);
+        String token  =  constant.sharedPreferences.getString(Constant.TOKEN,"");
+        AndroidNetworking.initialize(this);
+        AndroidNetworking.post(" https://yashcoder.pythonanywhere.com/logout/")
+                .addHeaders("Authorization","Token "+token)
+                .setPriority(Priority.HIGH)
+                .build()
+                .getAsJSONObject(new JSONObjectRequestListener() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        constant.sharedPreferences.edit().clear().apply();
+                        logoutProgress.setVisibility(View.GONE);
+                        startActivity(new Intent(MainActivity.this,LoginActivity.class));
+                        finish();
+                    }
+
+                    @Override
+                    public void onError(ANError anError) {
+                        Log.d( "onError",anError.getErrorBody());
+                    }
+                });
+    }
+
+    public void logoutClick(View view) {
+        onClickOfLogOut();
     }
 }
